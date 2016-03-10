@@ -29,6 +29,7 @@ library
   default-extensions: CPP
                       TypeOperators
                       DataKinds
+                      PolyKinds
                       TypeFamilies
                       FlexibleInstances
                       OverloadedStrings
