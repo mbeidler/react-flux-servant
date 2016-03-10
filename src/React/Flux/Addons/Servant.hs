@@ -45,7 +45,10 @@ class HasAjaxRequest endpoint where
 
 instance (ToJSON a, HasAjaxRequest sub) => HasAjaxRequest (ReqBody '[JSON] a :> sub) where
     type MkRequest (ReqBody '[JSON] a :> sub) = a -> MkRequest sub
-    toRequest _ r body = toRequest (Proxy :: Proxy sub) (r { rBody = toJSVal_aeson body })
+    toRequest _ r body = toRequest (Proxy :: Proxy sub) (r
+        { rBody = toJSVal_aeson body >>= js_JSONstringify
+        , rHeaders = rHeaders r ++ [("Content-Type", "application/json")]
+        })
 
 instance (KnownSymbol sym, HasAjaxRequest sub) => HasAjaxRequest (sym :> sub) where
     type MkRequest (sym :> sub) = MkRequest sub
@@ -73,7 +76,7 @@ instance (ReflectMethod m, FromJSON a) => HasAjaxRequest (Verb m s '[JSON] a) wh
         let req = AjaxRequest
                   { reqMethod = JSS.textToJSString $ T.decodeUtf8 $ reflectMethod (Proxy :: Proxy m)
                   , reqURI = JSS.intercalate "/" (segments r)
-                  , reqHeaders = rHeaders r
+                  , reqHeaders = rHeaders r ++ [("Accept", "application/json")]
                   , reqBody = body
                   }
         ajax req $ \resp ->
@@ -91,3 +94,7 @@ instance (ReflectMethod m, FromJSON a) => HasAjaxRequest (Verb m s '[JSON] a) wh
 foreign import javascript unsafe
     "JSON['parse']($1)"
     js_JSONParse :: JSString -> IO JSVal
+
+foreign import javascript unsafe
+    "JSON['stringify']($1)"
+    js_JSONstringify :: JSVal -> IO JSVal
