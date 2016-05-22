@@ -16,6 +16,7 @@ import Data.Typeable (Proxy(..))
 import Data.Aeson
 import Data.JSString (JSString)
 import Control.Arrow ((***))
+import Data.Monoid ((<>))
 import qualified Data.JSString as JSS
 import qualified Data.JSString.Text as JSS
 import qualified Data.Text as T
@@ -24,6 +25,7 @@ import qualified Data.Text.Encoding as T
 data Request = Request {
     segments :: [JSString]
   , rHeaders :: [(JSString, JSString)]
+  , rQuery :: [(JSString, JSString)]
   , rBody :: IO JSVal
 }
 
@@ -35,7 +37,7 @@ data ApiRequestConfig api = ApiRequestConfig
     }
 
 request :: (IsElem endpoint api, HasAjaxRequest endpoint) => ApiRequestConfig api -> Proxy endpoint -> MkRequest endpoint
-request (ApiRequestConfig p h) endpoint = toRequest endpoint (Request [JSS.pack p] h' (pure nullRef))
+request (ApiRequestConfig p h) endpoint = toRequest endpoint (Request [JSS.pack p] h' [] (pure nullRef))
     where
         h' = map (JSS.pack *** JSS.pack) h
 
@@ -69,13 +71,24 @@ instance (KnownSymbol sym, ToHttpApiData a, HasAjaxRequest sub) => HasAjaxReques
             sym' = JSS.pack $ symbolVal (Proxy :: Proxy sym)
             a' = JSS.pack $ T.unpack $ toUrlPiece a
 
+instance (KnownSymbol sym, ToHttpApiData a, HasAjaxRequest sub) => HasAjaxRequest (QueryParam sym a :> sub) where
+    type MkRequest (QueryParam sym a :> sub) = Maybe a -> MkRequest sub
+    toRequest _ r Nothing = toRequest (Proxy :: Proxy sub) r
+    toRequest _ r (Just a) = toRequest (Proxy :: Proxy sub) r { rQuery = rQuery r ++ [(sym', a')]}
+        where
+            sym' = JSS.pack $ symbolVal (Proxy :: Proxy sym)
+            a' = JSS.pack $ T.unpack $ toUrlPiece a
+
 instance (ReflectMethod m, FromJSON a) => HasAjaxRequest (Verb m s '[JSON] a) where
     type MkRequest (Verb m s '[JSON] a) = HandleResponse a -> IO ()
     toRequest _ r handler = do
         body <- rBody r
+        let query :: JSString = case rQuery r of
+                        [] -> ""
+                        qs -> "?" <> JSS.intercalate "&" (map (\(x,y) -> x <> "=" <> y) qs)
         let req = AjaxRequest
                   { reqMethod = JSS.textToJSString $ T.decodeUtf8 $ reflectMethod (Proxy :: Proxy m)
-                  , reqURI = JSS.intercalate "/" (segments r)
+                  , reqURI = JSS.intercalate "/" (segments r) <> query
                   , reqHeaders = rHeaders r ++ [("Accept", "application/json")]
                   , reqBody = body
                   }
