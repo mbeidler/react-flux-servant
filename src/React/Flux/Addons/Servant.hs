@@ -29,7 +29,7 @@ data Request = Request {
   , rBody :: IO JSVal
 }
 
-type HandleResponse a = Either (Int,String) a -> [SomeStoreAction]
+type HandleResponse a = Either (Int,String) a -> IO [SomeStoreAction]
 
 data ApiRequestConfig api = ApiRequestConfig
     { urlPrefix :: String
@@ -98,12 +98,12 @@ instance (ReflectMethod m, FromJSON a) => HasAjaxRequest (Verb m s '[JSON] a) wh
                 then do
                     j <- js_JSONParse $ respResponseText resp
                     mv <- fromJSVal j
-                    return $ case mv of
+                    case mv of
                         Nothing -> handler $ Left (500, "Unable to convert response body")
                         Just v -> case fromJSON v of
                             Success v' -> handler $ Right v'
                             Error e -> handler $ Left (500, e)
-                else return $ handler $ Left (respStatus resp, JSS.unpack $ respResponseText resp)
+                else handler $ Left (respStatus resp, JSS.unpack $ respResponseText resp)
 
 foreign import javascript unsafe
     "JSON['parse']($1)"
