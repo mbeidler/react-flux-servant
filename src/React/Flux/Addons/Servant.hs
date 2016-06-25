@@ -29,7 +29,7 @@ data Request = Request {
   , rBody :: IO JSVal
 }
 
-type HandleResponse a = Either (Int,String) a -> IO [SomeStoreAction]
+type HandleResponse a = Either (Int,String) a -> [SomeStoreAction]
 
 data ApiRequestConfig api = ApiRequestConfig
     { urlPrefix :: String
@@ -65,8 +65,9 @@ instance (ToHttpApiData v, HasAjaxRequest sub) => HasAjaxRequest (Capture sym v 
             v' = JSS.pack $ T.unpack $ toUrlPiece v
 
 instance (KnownSymbol sym, ToHttpApiData a, HasAjaxRequest sub) => HasAjaxRequest (Header sym a :> sub) where
-    type MkRequest (Header sym a :> sub) = a -> MkRequest sub
-    toRequest _ r a = toRequest (Proxy :: Proxy sub) (r { rHeaders = rHeaders r ++ [(sym',a')]})
+    type MkRequest (Header sym a :> sub) = Maybe a -> MkRequest sub
+    toRequest _ r Nothing  = toRequest (Proxy :: Proxy sub) r
+    toRequest _ r (Just a) = toRequest (Proxy :: Proxy sub) (r { rHeaders = rHeaders r ++ [(sym',a')]})
         where
             sym' = JSS.pack $ symbolVal (Proxy :: Proxy sym)
             a' = JSS.pack $ T.unpack $ toUrlPiece a
@@ -97,12 +98,12 @@ instance (ReflectMethod m, FromJSON a) => HasAjaxRequest (Verb m s '[JSON] a) wh
                 then do
                     j <- js_JSONParse $ respResponseText resp
                     mv <- fromJSVal j
-                    case mv of
+                    return $ case mv of
                         Nothing -> handler $ Left (500, "Unable to convert response body")
                         Just v -> case fromJSON v of
                             Success v' -> handler $ Right v'
                             Error e -> handler $ Left (500, e)
-                else handler $ Left (respStatus resp, JSS.unpack $ respResponseText resp)
+                else return $ handler $ Left (respStatus resp, JSS.unpack $ respResponseText resp)
 
 foreign import javascript unsafe
     "JSON['parse']($1)"
