@@ -1,5 +1,6 @@
 module React.Flux.Addons.Servant(
     HandleResponse
+  , RequestTimeout(..)
   , ApiRequestConfig(..)
   , request
   , HasAjaxRequest(..)
@@ -7,6 +8,7 @@ module React.Flux.Addons.Servant(
 ) where
 
 import React.Flux
+import React.Flux.Ajax
 import Servant.Utils.Links
 import Servant.API
 import GHCJS.Types (JSVal, nullRef)
@@ -15,7 +17,6 @@ import GHC.TypeLits
 import Data.Typeable (Proxy(..))
 import Data.Aeson
 import Data.JSString (JSString)
-import Control.Arrow ((***))
 import Data.Monoid ((<>))
 import qualified Data.JSString as JSS
 import qualified Data.JSString.Text as JSS
@@ -27,19 +28,18 @@ data Request = Request {
   , rHeaders :: [(JSString, JSString)]
   , rQuery :: [(JSString, JSString)]
   , rBody :: IO JSVal
+  , rTimeout :: RequestTimeout
 }
 
 type HandleResponse a = Either (Int,String) a -> IO [SomeStoreAction]
 
 data ApiRequestConfig api = ApiRequestConfig
-    { urlPrefix :: String
-    , requestHeaders :: [(String,String)]
+    { urlPrefix :: JSString
+    , timeout :: RequestTimeout
     }
 
 request :: (IsElem endpoint api, HasAjaxRequest endpoint) => ApiRequestConfig api -> Proxy endpoint -> MkRequest endpoint
-request (ApiRequestConfig p h) endpoint = toRequest endpoint (Request [JSS.pack p] h' [] (pure nullRef))
-    where
-        h' = map (JSS.pack *** JSS.pack) h
+request (ApiRequestConfig p t) endpoint = toRequest endpoint (Request [p] [] [] (pure nullRef) t)
 
 class HasAjaxRequest endpoint where
     type MkRequest endpoint
@@ -92,6 +92,7 @@ instance (ReflectMethod m, FromJSON a) => HasAjaxRequest (Verb m s '[JSON] a) wh
                   , reqURI = JSS.intercalate "/" (segments r) <> query
                   , reqHeaders = rHeaders r ++ [("Accept", "application/json")]
                   , reqBody = body
+                  , reqTimeout = rTimeout r
                   }
         ajax req $ \resp ->
             if respStatus resp == 200

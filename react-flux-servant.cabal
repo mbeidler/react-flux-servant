@@ -36,8 +36,8 @@ library
                       ScopedTypeVariables
 
   build-depends: base >=4.8 && < 5
-               , react-flux >= 1.0 && < 1.2
-               , servant >= 0.5
+               , react-flux >= 1.2 && < 1.3
+               , servant >= 0.7
                , aeson >= 0.8
                , text >= 1.2
 
