@@ -1,0 +1,5 @@
+resolver: nightly-2016-08-28
+packages:
+    - .
+extra-deps:
+    - react-flux-1.2.1

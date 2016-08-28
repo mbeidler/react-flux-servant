@@ -1,3 +1,4 @@
 syntax:glob
 .stack-work/
 .*.swp
+dist/
