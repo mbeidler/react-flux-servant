@@ -15,7 +15,7 @@
 -- @
 -- type GetUser = "user" :> Capture "user_id" UserId :> Get '[JSON] User
 -- type SetUser = "user" :> Capture "user_id" UserId :> ReqBody '[JSON] User :> Post '[JSON] ()
--- type MyAPI = GetUser :<|> SetUser
+-- type MyAPI = GetUser :\<|\> SetUser
 -- @
 --
 -- I would create a store as follows:
@@ -42,7 +42,7 @@
 --
 --   transform (RequestUser uid) us = do
 --     request cfg (Proxy :: Proxy GetUser) uid $
---       \r -> return [SomeStoreAction userStore $ RequestUserResponse uid r]
+--       \\r -> return [SomeStoreAction userStore $ RequestUserResponse uid r]
 --     return $ us {reqStatus = PendingRequest}
 --
 --   transform (RequestUserResponse _ (Left (_errCode, err))) us =
@@ -55,7 +55,7 @@
 --
 --   transform (UpdateUser uid u) us = do
 --     request cfg (Proxy :: Proxy SetUser) uid u $
---       \r -> return [SomeStoreAction userStore $ UpdateUserResponse uid r]
+--       \\r -> return [SomeStoreAction userStore $ UpdateUserResponse uid r]
 --     return $ us { reqStatus = PendingRequest
 --                 , users = Map.insert uid u (users us)
 --                 }
@@ -170,10 +170,10 @@ data ApiRequestConfig api = ApiRequestConfig
 -- @
 -- type GetUser = "user" :> Capture "user_id" UserId :> Get '[JSON] User
 -- type SetUser = "user" :> Capture "user_id" UserId :> ReqBody '[JSON] User :> Post '[JSON] ()
--- type MyAPI = GetUser :<|> SetUser
+-- type MyAPI = GetUser :\<|\> SetUser
 -- @
 --
--- With these definitions,
+-- Then
 --
 -- @
 -- MkRequest GetUser ~ UserId -> HandleResponse User -> IO ()
