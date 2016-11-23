@@ -1,5 +1,5 @@
 name:                react-flux-servant
-version:             0.1.0
+version:             0.1.1
 synopsis:            Allow react-flux stores to send requests to a servant server
 category:            Web
 homepage:            https://bitbucket.org/wuzzeb/react-flux-servant
