@@ -77,6 +77,7 @@ module React.Flux.Addons.Servant(
   , ApiRequestConfig(..)
   , request
   , HasAjaxRequest(..)
+  , Request(..)
 ) where
 
 import React.Flux
