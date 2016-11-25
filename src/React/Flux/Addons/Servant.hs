@@ -224,6 +224,13 @@ instance (KnownSymbol sym, ToHttpApiData a, HasAjaxRequest sub) => HasAjaxReques
             sym' = jsPack $ symbolVal (Proxy :: Proxy sym)
             a' = jsPack $ T.unpack $ toUrlPiece a
 
+instance (KnownSymbol sym, HasAjaxRequest sub) => HasAjaxRequest (QueryFlag sym :> sub) where
+    type MkRequest (QueryFlag sym :> sub) = Bool -> MkRequest sub
+    toRequest _ r False = toRequest (Proxy :: Proxy sub) r
+    toRequest _ r True = toRequest (Proxy :: Proxy sub) r { rQuery = rQuery r ++ [(sym', "true")]}
+        where
+            sym' = jsPack $ symbolVal (Proxy :: Proxy sym)
+
 instance (KnownSymbol sym, ToHttpApiData a, HasAjaxRequest sub) => HasAjaxRequest (QueryParam sym a :> sub) where
     type MkRequest (QueryParam sym a :> sub) = Maybe a -> MkRequest sub
     toRequest _ r Nothing = toRequest (Proxy :: Proxy sub) r
