@@ -239,8 +239,14 @@ instance (KnownSymbol sym, ToHttpApiData a, HasAjaxRequest sub) => HasAjaxReques
             sym' = jsPack $ symbolVal (Proxy :: Proxy sym)
             a' = jsPack $ T.unpack $ toUrlPiece a
 
-instance (ReflectMethod m, FromJSON a) => HasAjaxRequest (Verb m s '[JSON] a) where
-    type MkRequest (Verb m s '[JSON] a) = HandleResponse a -> IO ()
+-- | Extracts 'Verb' body's content Needed
+type family VBodyContent a where
+  VBodyContent (Headers hdrs a) = a
+  VBodyContent a = a
+
+instance (ReflectMethod m, FromJSON (VBodyContent vbody))
+    => HasAjaxRequest (Verb m s '[JSON] vbody) where
+    type MkRequest (Verb m s '[JSON] vbody) = HandleResponse (VBodyContent vbody) -> IO ()
     toRequest _ r handler = do
         body <- rBody r
         let query :: JSString = case rQuery r of
